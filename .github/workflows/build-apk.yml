@@ -18,36 +18,29 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        cache: gradle
 
-    - name: Set up Android SDK
-      uses: android-actions/setup-android@v3
-
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v4
-      with:
-        gradle-version: '8.11.1'
-
-    - name: Prepare Debug Keystore and Env
+    - name: Generate debug keystore and local env
       run: |
-        # Buat debug keystore jika belum ada agar gradle tidak error
-        if [ ! -f "debug.keystore" ]; then
-          if [ -f "debug.keystore.base64" ]; then
-            base64 -d debug.keystore.base64 > debug.keystore
-          else
-            keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-          fi
+        # Restore or create debug keystore
+        if [ -f "debug.keystore.base64" ]; then
+          base64 -d debug.keystore.base64 > debug.keystore
+        else
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
         fi
         
-        # Buat file .env dummy untuk secrets gradle plugin
-        touch .env
-        echo "GEMINI_API_KEY=mock_key_for_ci_build" >> .env
-        echo "MAPS_API_KEY=mock_maps_key" >> .env
+        # Create .env and .env.example
+        touch .env .env.example
+        echo "GEMINI_API_KEY=dummy_key_build" > .env
+        echo "GEMINI_API_KEY=dummy_key_build" > .env.example
 
-    - name: Build Debug APK
-      run: gradle assembleDebug --stacktrace --no-daemon -x test -x lint
+    - name: Build APK with Gradle
+      uses: gradle/gradle-build-action@v3
+      with:
+        arguments: assembleDebug -x test -x lint --no-daemon
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: BengkelKu-App-Debug
-        path: app/build/outputs/apk/debug/*.apk
+        path: app/build/outputs/apk/debug/app-debug.apk
