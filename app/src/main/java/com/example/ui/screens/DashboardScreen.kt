@@ -75,6 +75,8 @@ fun DashboardScreen(
     onTicketClick: (Long) -> Unit,
     onNavigateToForum: () -> Unit,
     onNavigateToProfile: () -> Unit,
+    onNavigateToSolutions: () -> Unit,
+    onNavigateToSop: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val currentMechanic by viewModel.currentMechanic.collectAsStateWithLifecycle()
@@ -83,6 +85,9 @@ fun DashboardScreen(
     val selectedFilter by viewModel.selectedFilter.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
+    val totalBonusPaid by viewModel.totalOwnerBonusPaid.collectAsStateWithLifecycle()
+    val allSolutions by viewModel.allSolutionPosts.collectAsStateWithLifecycle()
+
 
     var showQuickSearchDialog by remember { mutableStateOf(false) }
 
@@ -195,6 +200,10 @@ fun DashboardScreen(
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color.White)
                             .border(1.dp, HighDensityBorder, RoundedCornerShape(12.dp))
+                            .clickable {
+                                viewModel.setFilter("OPEN")
+                                onNavigateToForum()
+                            }
                             .padding(10.dp)
                     ) {
                         Column {
@@ -220,6 +229,10 @@ fun DashboardScreen(
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color.White)
                             .border(1.dp, HighDensityBorder, RoundedCornerShape(12.dp))
+                            .clickable {
+                                viewModel.setFilter("RESOLVED")
+                                onNavigateToForum()
+                            }
                             .padding(10.dp)
                     ) {
                         Column {
@@ -245,6 +258,10 @@ fun DashboardScreen(
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color.White)
                             .border(1.dp, HighDensityBorder, RoundedCornerShape(12.dp))
+                            .clickable {
+                                viewModel.setFilter("URGENT")
+                                onNavigateToForum()
+                            }
                             .padding(10.dp)
                     ) {
                         Column {
@@ -270,6 +287,7 @@ fun DashboardScreen(
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color.White)
                             .border(1.dp, HighDensityBorder, RoundedCornerShape(12.dp))
+                            .clickable { onNavigateToSop() }
                             .padding(10.dp)
                     ) {
                         Column {
@@ -419,8 +437,99 @@ fun DashboardScreen(
             }
         }
 
+        // 3.5 Wadah Solusi & Kasus Berhadiah Owner (Featured Card)
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable { onNavigateToSolutions() }
+                    .testTag("card_wadah_solusi_dashboard"),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF3C7)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(Color(0xFFD97706), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Verified,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "WADAH SOLUSI BERHADIAH",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFF92400E)
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Box(
+                                modifier = Modifier
+                                    .background(Color(0xFFD97706), RoundedCornerShape(4.dp))
+                                    .padding(horizontal = 5.dp, vertical = 1.dp)
+                            ) {
+                                Text(
+                                    text = "BONUS OWNER",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Posting solusi kendala unik dari cabang Anda & dapatkan bayaran bonus dari Owner!",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 11.sp,
+                                color = Color(0xFF78350F)
+                            ),
+                            maxLines = 2
+                        )
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text(
+                            text = "Rp ${String.format("%,d", totalBonusPaid).replace(',', '.')}",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF047857)
+                            )
+                        )
+                        Text(
+                            text = "${allSolutions.size} Solusi",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 9.sp,
+                                color = Color(0xFF92400E)
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
         // 4. Daftar Tiket Terbuka Header & Filter Chips
         item {
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

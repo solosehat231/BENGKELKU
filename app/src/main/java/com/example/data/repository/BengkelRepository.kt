@@ -2,10 +2,13 @@ package com.example.data.repository
 
 import com.example.data.ai.AiDiagnosticEngine
 import com.example.data.local.ChatMessageDao
+import com.example.data.local.SolutionDao
 import com.example.data.local.TicketDao
 import com.example.data.model.Branch
 import com.example.data.model.ChatMessageEntity
 import com.example.data.model.MechanicProfile
+import com.example.data.model.SolutionCommentEntity
+import com.example.data.model.SolutionPostEntity
 import com.example.data.model.SopDocument
 import com.example.data.model.SopStep
 import com.example.data.model.TicketEntity
@@ -17,14 +20,59 @@ import kotlinx.coroutines.flow.first
 class BengkelRepository(
     private val ticketDao: TicketDao,
     private val chatMessageDao: ChatMessageDao,
+    private val solutionDao: SolutionDao,
     private val aiEngine: AiDiagnosticEngine = AiDiagnosticEngine()
 ) {
     val allTickets: Flow<List<TicketEntity>> = ticketDao.getAllTickets()
     val openTickets: Flow<List<TicketEntity>> = ticketDao.getOpenTickets()
     val resolvedTickets: Flow<List<TicketEntity>> = ticketDao.getResolvedTickets()
 
+    val allSolutionPosts: Flow<List<SolutionPostEntity>> = solutionDao.getAllSolutionPosts()
+    val rewardedSolutionPosts: Flow<List<SolutionPostEntity>> = solutionDao.getRewardedPosts()
+
     fun observeTicket(id: Long): Flow<TicketEntity?> = ticketDao.observeTicketById(id)
     fun observeMessages(ticketId: Long): Flow<List<ChatMessageEntity>> = chatMessageDao.getMessagesForTicket(ticketId)
+
+    fun observeSolutionPost(id: Long): Flow<SolutionPostEntity?> = solutionDao.observePostById(id)
+    fun observeSolutionComments(postId: Long): Flow<List<SolutionCommentEntity>> = solutionDao.getCommentsForPost(postId)
+
+    suspend fun createSolutionPost(post: SolutionPostEntity): Long {
+        return solutionDao.insertPost(post)
+    }
+
+    suspend fun upvoteHelpful(postId: Long) {
+        solutionDao.incrementHelpful(postId)
+    }
+
+    suspend fun rewardSolutionPost(postId: Long, amount: Long, ownerNote: String) {
+        solutionDao.rewardPostByOwner(postId, amount, ownerNote)
+        // Add owner commendation comment automatically
+        val comment = SolutionCommentEntity(
+            postId = postId,
+            authorName = "Pak Hendra (Owner Bengkel)",
+            branchName = "Pusat Manajemen",
+            comment = "🌟 Apresiasi Owner: $ownerNote (Bonus Rp ${String.format("%,d", amount).replace(',', '.')} telah dicairkan ke saldo bonus mekanik). Terus bagikan solusi berkualitas!",
+            isOwner = true
+        )
+        solutionDao.insertComment(comment)
+        solutionDao.incrementCommentsCount(postId)
+    }
+
+    suspend fun addSolutionComment(postId: Long, authorName: String, branchName: String, commentText: String, isOwner: Boolean = false) {
+        val comment = SolutionCommentEntity(
+            postId = postId,
+            authorName = authorName,
+            branchName = branchName,
+            comment = commentText,
+            isOwner = isOwner
+        )
+        solutionDao.insertComment(comment)
+        solutionDao.incrementCommentsCount(postId)
+    }
+
+    fun searchSolutionPosts(query: String): Flow<List<SolutionPostEntity>> {
+        return solutionDao.searchSolutionPosts(query)
+    }
 
     suspend fun createTicket(ticket: TicketEntity): Long {
         val id = ticketDao.insertTicket(ticket)
@@ -362,6 +410,174 @@ class BengkelRepository(
                 )
             )
             chatMessageDao.insertAllMessages(messages2)
+
+            // Seed Knowledge Base / Solution Posts with Owner Rewards
+            val initialSolutions = listOf(
+                SolutionPostEntity(
+                    id = 1,
+                    title = "Trik Atasi Innova Diesel 2GD Brebet P0087 Tanpa Ganti Supply Pump",
+                    vehicleBrand = "Toyota",
+                    vehicleModel = "Innova Reborn 2.4 Diesel A/T",
+                    year = "2020",
+                    dtcCode = "P0087",
+                    category = "Mesin & Diesel",
+                    symptomDescription = "Mobil mendadak hilang tenaga (limp mode) saat tanjakan tol atau kickdown mendadak di atas 2.500 RPM. Muncul DTC P0087 Fuel Rail Pressure Too Low.",
+                    rootCause = "Plunger Suction Control Valve (SCV) tersumbat serpihan jelaga asam sulfur solar subsidi + soket SCV sedikit kendor getaran mesin.",
+                    solutionSteps = """
+                        1. Bongkar SCV di bagian belakang Supply Pump (kunci L5 pendek).
+                        2. Rendam plunger SCV dengan injector cleaner & semprot angin bertekanan.
+                        3. Polish halus permukaan plunger menggunakan amplas 2000 basah + oli bersih sampai lancar tanpa hambatan gerak.
+                        4. Rapatkan skun soket listrik SCV dan pasang O-ring baru tahan panas.
+                        5. Lakukan Fuel Pressure Relief Valve Test & Fuel Learning via scanner.
+                    """.trimIndent(),
+                    partsReplaced = "O-ring SCV baru + Cleaner (Hemat jutaan rupiah dibanding ganti Supply Pump segelondong)",
+                    estimatedSavingsOrCost = "Hemat Rp 4.500.000 (Hanya biaya jasa + O-ring Rp 45.000)",
+                    mechanicName = "Budi Santoso",
+                    branchId = 1,
+                    branchName = "Cabang 1 - Montecarlo Solo",
+                    helpfulCount = 42,
+                    isOwnerRewarded = true,
+                    rewardAmount = 150000L,
+                    ownerNote = "Luar biasa solutif! Trik pembersihan SCV ini menghemat biaya konsumen dan meningkatkan kepuasan bengkel. Bonus Rp 150.000 sudah dikirimkan.",
+                    ownerRewardedAt = System.currentTimeMillis() - 1000 * 60 * 60 * 24 * 2,
+                    commentsCount = 3,
+                    createdAt = System.currentTimeMillis() - 1000 * 60 * 60 * 24 * 3
+                ),
+                SolutionPostEntity(
+                    id = 2,
+                    title = "Solusi Brio / Mobilio CVT Dengung & Jedug di Kecepatan 40-60 Km/Jam",
+                    vehicleBrand = "Honda",
+                    vehicleModel = "Brio / Mobilio CVT",
+                    year = "2018-2022",
+                    dtcCode = "P0730 / Non-DTC",
+                    category = "Matic & Transmisi",
+                    symptomDescription = "Saat kecepatan sedang 40-60 km/jam terdengar suara mendengung halus dan ada hentakan kecil (judder) saat akselerasi awal stop and go.",
+                    rootCause = "CVT Start Clutch adaptasi slip karena oli HCF-2 terkontaminasi partikel gesek mikro dan filter matic kertas sudah jenuh.",
+                    solutionSteps = """
+                        1. Lakukan kuras total oli transmisi dengan ATF/CVT Changer (8 Liter HCF-2 Original).
+                        2. Buka karter oli matic, bersihkan magnet penangkap gram besi & ganti strainer filter kaleng + filter kertas samping.
+                        3. Bersihkan solenoid body valve dengan chemical non-korosif.
+                        4. Pasang paking karter baru dan kencangkan baut torsi 9.8 Nm silang.
+                        5. Lakukan prosedur Static CVT Calibration (Idle Learning + Forward/Reverse Engagement).
+                    """.trimIndent(),
+                    partsReplaced = "Oli Honda HCF-2, Filter Matic Kertas, Gasket Carter",
+                    estimatedSavingsOrCost = "Estimasi Biaya Part & Jasa: Rp 1.250.000",
+                    mechanicName = "Agus Prasetyo",
+                    branchId = 3,
+                    branchName = "Cabang 3 - Montecarlo Sukoharjo",
+                    helpfulCount = 38,
+                    isOwnerRewarded = true,
+                    rewardAmount = 200000L,
+                    ownerNote = "SOP kuras & kalibrasi CVT sangat detail dan akurat. Mengurangi komplain transmisi matic di seluruh cabang. Bonus Rp 200.000.",
+                    ownerRewardedAt = System.currentTimeMillis() - 1000 * 60 * 60 * 24 * 1,
+                    commentsCount = 2,
+                    createdAt = System.currentTimeMillis() - 1000 * 60 * 60 * 24 * 4
+                ),
+                SolutionPostEntity(
+                    id = 3,
+                    title = "Lampu ABS & Check Engine Calya / Sigra Nyala Usai Cuci Mobil (C1201 / U0121)",
+                    vehicleBrand = "Toyota / Daihatsu",
+                    vehicleModel = "Calya / Sigra 1.2",
+                    year = "2019-2023",
+                    dtcCode = "C1201 / C1405",
+                    category = "Kelistrikan & Sensor",
+                    symptomDescription = "Indikator ABS dan Engine check menyala bersamaan, speedometer kadang drop ke 0 saat jalan.",
+                    rootCause = "Pin connector kabel sensor speed ABS roda kiri depan terjepit braket inner fender dan kemasukan air steam.",
+                    solutionSteps = """
+                        1. Lepas roda depan kiri dan cover spakbor plastik.
+                        2. Cabut socket sensor ABS, periksa karat kehijauan (korosi tembaga).
+                        3. Semprot kontak cleaner elektronik berkekuatan tinggi, amplas halus pin dengan jarum.
+                        4. Bungkus kabel dengan selang bakar anti panas (heat shrink) dan re-routing jalur kabel agar tidak tertarik saat belok patah.
+                        5. Lapisi konektor dengan silicone dielectric grease kedap air.
+                    """.trimIndent(),
+                    partsReplaced = "Heatshrink tube + Silicone grease (Tanpa ganti sensor)",
+                    estimatedSavingsOrCost = "Biaya Material: Rp 15.000 (Hemat ganti modul Rp 850.000)",
+                    mechanicName = "Slamet Raharjo",
+                    branchId = 6,
+                    branchName = "Cabang 6 - Montecarlo Klaten",
+                    helpfulCount = 29,
+                    isOwnerRewarded = false,
+                    rewardAmount = 0L,
+                    ownerNote = "",
+                    commentsCount = 1,
+                    createdAt = System.currentTimeMillis() - 1000 * 60 * 60 * 15
+                ),
+                SolutionPostEntity(
+                    id = 4,
+                    title = "AC Ertiga / XL7 Kurang Dingin di Siang Hari tapi Malam Menggigil",
+                    vehicleBrand = "Suzuki",
+                    vehicleModel = "All New Ertiga / XL7",
+                    year = "2019-2022",
+                    dtcCode = "B1422 (Aircon)",
+                    category = "AC & Pendingin",
+                    symptomDescription = "Saat macet siang terik AC mengeluarkan angin sejuk suam-suam kuku, namun saat malam hari atau jalan lancar dingin normal.",
+                    rootCause = "Extra fan condenser melemah putarannya (brush arang dinamo motor tipis) sehingga pelepasan panas kondensor terhambat.",
+                    solutionSteps = """
+                        1. Ukur arus motor fan radiator/AC saat kompresor ON (normal 8.5 - 11 Ampere).
+                        2. Cek relay extra fan di fuse box utama engine bay (ukur drop voltage).
+                        3. Ganti motor fan denso original.
+                        4. Bersihkan kisi-kisi kondensor dari debu dan serangga dengan semprotan air bertekanan sedang (hindari melengkungkan fin alumunium).
+                        5. Suhu kisi evaporator kembali ke 4.5°C stabil di siang terik!
+                    """.trimIndent(),
+                    partsReplaced = "Motor Extra Fan Radiator / Kondensor Denso",
+                    estimatedSavingsOrCost = "Biaya Part: Rp 420.000",
+                    mechanicName = "Rudi Hartono",
+                    branchId = 8,
+                    branchName = "Cabang 8 - Semeru Motor Magelang",
+                    helpfulCount = 19,
+                    isOwnerRewarded = false,
+                    rewardAmount = 0L,
+                    ownerNote = "",
+                    commentsCount = 1,
+                    createdAt = System.currentTimeMillis() - 1000 * 60 * 60 * 8
+                )
+            )
+            solutionDao.insertAllPosts(initialSolutions)
+
+            val initialSolutionComments = listOf(
+                SolutionCommentEntity(
+                    postId = 1,
+                    authorName = "Pak Hendra (Owner Bengkel)",
+                    branchName = "Pusat Manajemen",
+                    comment = "🌟 Apresiasi Owner: Luar biasa solutif! Trik pembersihan SCV ini menghemat biaya konsumen dan meningkatkan kepuasan bengkel. Bonus Rp 150.000 sudah dikirimkan.",
+                    isOwner = true,
+                    timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 24 * 2
+                ),
+                SolutionCommentEntity(
+                    postId = 1,
+                    authorName = "Ahmad Fauzi",
+                    branchName = "Cabang 5 - Semarang",
+                    comment = "Sudah saya terapkan di Cabang 5 untuk Fortuner 2GD kemarin sore mas Budi, langsung sembuh total tanpa ganti SCV! Mantap ilmunya.",
+                    isOwner = false,
+                    timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 20
+                ),
+                SolutionCommentEntity(
+                    postId = 2,
+                    authorName = "Pak Hendra (Owner Bengkel)",
+                    branchName = "Pusat Manajemen",
+                    comment = "🌟 Apresiasi Owner: SOP kuras & kalibrasi CVT sangat detail dan akurat. Mengurangi komplain transmisi matic di seluruh cabang. Bonus Rp 200.000.",
+                    isOwner = true,
+                    timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 24 * 1
+                ),
+                SolutionCommentEntity(
+                    postId = 2,
+                    authorName = "Suyatno",
+                    branchName = "Cabang 6 - Klaten",
+                    comment = "Torsi 9.8 Nm baut karter ini kunci penting supaya paking karet gak melar/bocor oli. Makasih om Agus.",
+                    isOwner = false,
+                    timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 10
+                ),
+                SolutionCommentEntity(
+                    postId = 3,
+                    authorName = "Budi Santoso",
+                    branchName = "Cabang 1 - Solo",
+                    comment = "Kreatif mas Slamet! Seringkali mekanik baru langsung vonis ganti sensor ABS seharga 800rb padahal cuma air kotor di soket.",
+                    isOwner = false,
+                    timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 5
+                )
+            )
+            solutionDao.insertAllComments(initialSolutionComments)
         }
     }
 }
+

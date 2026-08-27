@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,13 +20,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Engineering
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.MonetizationOn
+import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -37,10 +46,12 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -58,7 +69,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.model.SolutionPostEntity
+import com.example.data.model.UserRole
 import com.example.ui.theme.HighDensityBlue
 import com.example.ui.theme.HighDensityBlueLight
 import com.example.ui.theme.HighDensityBorder
@@ -76,10 +90,20 @@ import com.example.ui.viewmodel.BengkelViewModel
 fun ProfileScheduleScreen(
     viewModel: BengkelViewModel,
     onLogoutClick: () -> Unit = {},
+    onNavigateToSolutions: () -> Unit = {},
+    onNavigateToForum: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val currentMechanic by viewModel.currentMechanic.collectAsStateWithLifecycle()
     val branches18 = viewModel.branches18
+    val allSolutionPosts by viewModel.allSolutionPosts.collectAsStateWithLifecycle()
+    val totalOwnerBonusPaid by viewModel.totalOwnerBonusPaid.collectAsStateWithLifecycle()
+
+    val rewardedPosts = remember(allSolutionPosts) {
+        allSolutionPosts.filter { it.isOwnerRewarded }.sortedByDescending { it.ownerRewardedAt ?: it.createdAt }
+    }
+
+    val isOwner = currentMechanic.role == UserRole.ADMIN_OWNER
 
     var isEditing by remember { mutableStateOf(false) }
     var editName by remember { mutableStateOf(currentMechanic.name) }
@@ -91,7 +115,7 @@ fun ProfileScheduleScreen(
         .mapNotNull { it.firstOrNull()?.toString() }
         .take(2)
         .joinToString("")
-        .ifEmpty { "MK" }
+        .ifEmpty { if (isOwner) "OW" else "MK" }
 
     val currentBranch = branches18.find { it.id == editBranchId } ?: branches18[0]
 
@@ -101,7 +125,7 @@ fun ProfileScheduleScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            text = "Profil Mekanik & Pengaturan",
+                            text = if (isOwner) "Profil Manajemen Owner" else "Profil Mekanik & Pengaturan",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = HighDensityNavy
@@ -122,7 +146,7 @@ fun ProfileScheduleScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // 1. Mechanic Identity Card
+            // 1. Identity Card (Mechanic or Owner)
             item {
                 Card(
                     modifier = Modifier
@@ -145,15 +169,24 @@ fun ProfileScheduleScreen(
                                 modifier = Modifier
                                     .size(56.dp)
                                     .clip(CircleShape)
-                                    .background(HighDensityBlueLight),
+                                    .background(if (isOwner) Color(0xFFFEF3C7) else HighDensityBlueLight),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = initials,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = HighDensityNavy,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                if (isOwner) {
+                                    Icon(
+                                        imageVector = Icons.Default.AdminPanelSettings,
+                                        contentDescription = null,
+                                        tint = Color(0xFFD97706),
+                                        modifier = Modifier.size(30.dp)
+                                    )
+                                } else {
+                                    Text(
+                                        text = initials,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = HighDensityNavy,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
 
                             Spacer(modifier = Modifier.width(14.dp))
@@ -170,12 +203,27 @@ fun ProfileScheduleScreen(
                                     Icon(
                                         imageVector = Icons.Default.Verified,
                                         contentDescription = null,
-                                        tint = HighDensityBlue,
+                                        tint = Color(currentMechanic.role.badgeColorHex),
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Surface(
+                                    color = Color(currentMechanic.role.badgeColorHex).copy(alpha = 0.12f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = "🛡️ ${currentMechanic.role.label}",
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(currentMechanic.role.badgeColorHex),
+                                        fontSize = 10.sp
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "📍 ${currentMechanic.branchName}",
+                                    text = if (isOwner) "📍 Kantor Pusat & 18 Cabang Montecarlo" else "📍 ${currentMechanic.branchName}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MontecarloOrange,
                                     fontWeight = FontWeight.SemiBold,
@@ -186,88 +234,292 @@ fun ProfileScheduleScreen(
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // Stats row
+                        // Stats row (Mechanic vs Owner)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .background(HighDensityCanvas, RoundedCornerShape(10.dp))
-                                    .border(1.dp, HighDensityBorder, RoundedCornerShape(10.dp))
-                                    .padding(8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = "${currentMechanic.solvedTicketsCount} Kasus",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = HighDensityBlue
-                                    )
-                                    Text(
-                                        text = "Terselesaikan",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = HighDensityTextSecondary,
-                                        fontSize = 9.sp
-                                    )
-                                }
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .background(HighDensityCanvas, RoundedCornerShape(10.dp))
-                                    .border(1.dp, HighDensityBorder, RoundedCornerShape(10.dp))
-                                    .padding(8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = "${currentMechanic.sharedSolutionsCount} Solusi",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = StatusSolvedGreen
-                                    )
-                                    Text(
-                                        text = "Diskusi Cabang",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = HighDensityTextSecondary,
-                                        fontSize = 9.sp
-                                    )
-                                }
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .background(HighDensityCanvas, RoundedCornerShape(10.dp))
-                                    .border(1.dp, HighDensityBorder, RoundedCornerShape(10.dp))
-                                    .padding(8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            Icons.Default.Star,
-                                            contentDescription = null,
-                                            tint = MontecarloOrange,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(2.dp))
+                            if (isOwner) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .background(HighDensityCanvas, RoundedCornerShape(10.dp))
+                                        .border(1.dp, HighDensityBorder, RoundedCornerShape(10.dp))
+                                        .clickable { onNavigateToSolutions() }
+                                        .padding(8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Text(
-                                            text = "4.9",
+                                            text = "${allSolutionPosts.size} Kasus",
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.Bold,
-                                            color = MontecarloOrange
+                                            color = HighDensityBlue
+                                        )
+                                        Text(
+                                            text = "Bank Solusi Cabang",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = HighDensityTextSecondary,
+                                            fontSize = 9.sp
                                         )
                                     }
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .background(HighDensityCanvas, RoundedCornerShape(10.dp))
+                                        .border(1.dp, HighDensityBorder, RoundedCornerShape(10.dp))
+                                        .clickable { onNavigateToSolutions() }
+                                        .padding(8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = "${rewardedPosts.size} Mekanik",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFD97706)
+                                        )
+                                        Text(
+                                            text = "Penerima Reward",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = HighDensityTextSecondary,
+                                            fontSize = 9.sp
+                                        )
+                                    }
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .background(HighDensityCanvas, RoundedCornerShape(10.dp))
+                                        .border(1.dp, HighDensityBorder, RoundedCornerShape(10.dp))
+                                        .clickable { onNavigateToForum() }
+                                        .padding(8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = "18 Cabang",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = StatusSolvedGreen
+                                        )
+                                        Text(
+                                            text = "Jaringan Montecarlo",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = HighDensityTextSecondary,
+                                            fontSize = 9.sp
+                                        )
+                                    }
+                                }
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .background(HighDensityCanvas, RoundedCornerShape(10.dp))
+                                        .border(1.dp, HighDensityBorder, RoundedCornerShape(10.dp))
+                                        .clickable {
+                                            viewModel.setFilter("RESOLVED")
+                                            onNavigateToForum()
+                                        }
+                                        .padding(8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = "${currentMechanic.solvedTicketsCount} Kasus",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = HighDensityBlue
+                                        )
+                                        Text(
+                                            text = "Terselesaikan",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = HighDensityTextSecondary,
+                                            fontSize = 9.sp
+                                        )
+                                    }
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .background(HighDensityCanvas, RoundedCornerShape(10.dp))
+                                        .border(1.dp, HighDensityBorder, RoundedCornerShape(10.dp))
+                                        .clickable {
+                                            viewModel.setFilter("MY_BRANCH")
+                                            onNavigateToForum()
+                                        }
+                                        .padding(8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = "${currentMechanic.sharedSolutionsCount} Solusi",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = StatusSolvedGreen
+                                        )
+                                        Text(
+                                            text = "Diskusi Cabang",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = HighDensityTextSecondary,
+                                            fontSize = 9.sp
+                                        )
+                                    }
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .background(HighDensityCanvas, RoundedCornerShape(10.dp))
+                                        .border(1.dp, HighDensityBorder, RoundedCornerShape(10.dp))
+                                        .padding(8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                Icons.Default.Star,
+                                                contentDescription = null,
+                                                tint = MontecarloOrange,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(2.dp))
+                                            Text(
+                                                text = "4.9",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MontecarloOrange
+                                            )
+                                        }
+                                        Text(
+                                            text = "Reputasi Mekanik",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = HighDensityTextSecondary,
+                                            fontSize = 9.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        if (isOwner) {
+                            // Total Akumulasi Reward yang Ditetapkan Owner
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFFFEF3C7), RoundedCornerShape(10.dp))
+                                    .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(10.dp))
+                                    .padding(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .background(Color(0xFFD97706), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.MonetizationOn,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
+                                            Text(
+                                                text = "Total Reward Ditetapkan Owner",
+                                                style = MaterialTheme.typography.labelMedium.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF92400E)
+                                                )
+                                            )
+                                            Text(
+                                                text = "Akumulasi dana tunai untuk mekanik cabang",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontSize = 10.sp,
+                                                    color = Color(0xFF78350F)
+                                                )
+                                            )
+                                        }
+                                    }
+
                                     Text(
-                                        text = "Reputasi Mekanik",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = HighDensityTextSecondary,
-                                        fontSize = 9.sp
+                                        text = "Rp ${String.format("%,d", totalOwnerBonusPaid).replace(',', '.')}",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color(0xFF047857)
+                                        )
+                                    )
+                                }
+                            }
+                        } else {
+                            // Bonus Dari Owner Bengkel Card (Khusus Mekanik)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFFFEF3C7), RoundedCornerShape(10.dp))
+                                    .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(10.dp))
+                                    .padding(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .background(Color(0xFFD97706), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Verified,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
+                                            Text(
+                                                text = "Reward Dari Owner (Tunai)",
+                                                style = MaterialTheme.typography.labelMedium.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF92400E)
+                                                )
+                                            )
+                                            Text(
+                                                text = "Apresiasi postingan solusi (diserahkan tunai)",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontSize = 10.sp,
+                                                    color = Color(0xFF78350F)
+                                                )
+                                            )
+                                        }
+                                    }
+
+                                    Text(
+                                        text = "Rp ${String.format("%,d", currentMechanic.totalBonusEarned).replace(',', '.')}",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color(0xFF047857)
+                                        )
                                     )
                                 }
                             }
@@ -276,7 +528,276 @@ fun ProfileScheduleScreen(
                 }
             }
 
+            // If logged in as Owner: show Section "Daftar Akumulasi Mekanik Yang Mendapatkan Reward"
+            if (isOwner) {
+                item {
+                    Column(modifier = Modifier.padding(top = 4.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.WorkspacePremium,
+                                contentDescription = null,
+                                tint = Color(0xFFD97706),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "DAFTAR AKUMULASI MEKANIK PENERIMA REWARD",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = HighDensityNavy
+                                ),
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Rekapitulasi mekanik 18 cabang yang berhak menerima penyerahan uang tunai:",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 11.sp,
+                                color = HighDensityTextSecondary
+                            )
+                        )
+                    }
+                }
+
+                if (rewardedPosts.isEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, HighDensityBorder)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "Belum Ada Penetapan Reward",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = HighDensityNavy
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Anda dapat menetapkan besaran reward tunai pada postingan solusi di Forum Solusi.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = HighDensityTextSecondary,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    items(rewardedPosts, key = { it.id }) { post ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp)),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A))
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(38.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFFFEF3C7)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Engineering,
+                                                contentDescription = null,
+                                                tint = Color(0xFFD97706),
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
+                                            Text(
+                                                text = post.mechanicName,
+                                                style = MaterialTheme.typography.titleSmall.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = HighDensityNavy
+                                                )
+                                            )
+                                            Text(
+                                                text = "📍 ${post.branchName}",
+                                                style = MaterialTheme.typography.bodySmall.copy(
+                                                    fontSize = 11.sp,
+                                                    color = MontecarloOrange,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            )
+                                        }
+                                    }
+
+                                    Surface(
+                                        color = Color(0xFFDCFCE7),
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF86EFAC))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Payments,
+                                                contentDescription = null,
+                                                tint = Color(0xFF047857),
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "+Rp ${String.format("%,d", post.rewardAmount).replace(',', '.')}",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = Color(0xFF047857),
+                                                    fontSize = 12.sp
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                // Solusi Kasus Info
+                                Surface(
+                                    color = HighDensityCanvas,
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(10.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Surface(
+                                                color = HighDensityBlueLight,
+                                                shape = RoundedCornerShape(4.dp)
+                                            ) {
+                                                Text(
+                                                    text = post.category,
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        fontSize = 9.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = HighDensityNavy
+                                                    ),
+                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "${post.vehicleBrand} ${post.vehicleModel} (${post.year})",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontSize = 10.sp,
+                                                    color = HighDensityTextSecondary,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = post.title,
+                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = HighDensityNavy
+                                            ),
+                                            maxLines = 2
+                                        )
+                                        if (post.ownerNote.isNotBlank()) {
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Surface(
+                                                color = Color(0xFFFEF3C7),
+                                                shape = RoundedCornerShape(6.dp),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Text(
+                                                    text = "💬 Catatan Owner: \"${post.ownerNote}\"",
+                                                    style = MaterialTheme.typography.bodySmall.copy(
+                                                        fontSize = 11.sp,
+                                                        color = Color(0xFF92400E)
+                                                    ),
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            tint = Color(0xFF047857),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "Berhak Diserahkan Tunai",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = Color(0xFF047857),
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 10.sp
+                                            )
+                                        )
+                                    }
+
+                                    Surface(
+                                        color = HighDensityBlueLight,
+                                        shape = RoundedCornerShape(6.dp),
+                                        modifier = Modifier.clickable {
+                                            viewModel.selectSolutionPost(post.id)
+                                            onNavigateToSolutions()
+                                        }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Buka Solusi",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    color = HighDensityBlue,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 10.sp
+                                                )
+                                            )
+                                            Spacer(modifier = Modifier.width(2.dp))
+                                            Icon(
+                                                imageVector = Icons.Default.ArrowForward,
+                                                contentDescription = null,
+                                                tint = HighDensityBlue,
+                                                modifier = Modifier.size(12.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // 2. Form Edit Profil Mekanik
+
             item {
                 Card(
                     modifier = Modifier
@@ -296,7 +817,7 @@ fun ProfileScheduleScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "PENGATURAN IDENTITAS MEKANIK",
+                                text = if (isOwner) "PENGATURAN IDENTITAS OWNER" else "PENGATURAN IDENTITAS MEKANIK",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = HighDensityNavy,
                                 letterSpacing = 0.5.sp,
@@ -372,7 +893,8 @@ fun ProfileScheduleScreen(
                                 )
                                 ExposedDropdownMenu(
                                     expanded = branchDropdownExpanded,
-                                    onDismissRequest = { branchDropdownExpanded = false }
+                                    onDismissRequest = { branchDropdownExpanded = false },
+                                    modifier = Modifier.background(Color.White)
                                 ) {
                                     branches18.forEach { b ->
                                         DropdownMenuItem(
@@ -390,7 +912,11 @@ fun ProfileScheduleScreen(
                                             onClick = {
                                                 editBranchId = b.id
                                                 branchDropdownExpanded = false
-                                            }
+                                            },
+                                            colors = MenuDefaults.itemColors(
+                                                textColor = HighDensityNavy
+                                            ),
+                                            modifier = Modifier.background(Color.White)
                                         )
                                     }
                                 }

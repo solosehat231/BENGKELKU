@@ -63,12 +63,14 @@ fun ForumScreen(
     viewModel: BengkelViewModel,
     onCreateTicketClick: () -> Unit,
     onTicketClick: (Long) -> Unit,
+    onNavigateToSolutions: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val tickets by viewModel.filteredTickets.collectAsStateWithLifecycle()
     val allTickets by viewModel.allTickets.collectAsStateWithLifecycle()
     val selectedFilter by viewModel.selectedFilter.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val currentMechanic by viewModel.currentMechanic.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -83,11 +85,16 @@ fun ForumScreen(
                                 color = HighDensityNavy
                             )
                             Text(
-                                text = "Total ${allTickets.size} Tiket Aktif & Diskusi Solusi",
+                                text = "${currentMechanic.branchName} • Total ${allTickets.size} Tiket Terdaftar",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = HighDensityTextSecondary,
                                 fontSize = 11.sp
                             )
+                        }
+                    },
+                    actions = {
+                        androidx.compose.material3.TextButton(onClick = onNavigateToSolutions) {
+                            Text("💰 Bank Solusi", fontWeight = FontWeight.Bold, color = MontecarloOrange)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -95,6 +102,7 @@ fun ForumScreen(
                 HorizontalDivider(color = HighDensityBorder, thickness = 1.dp)
             }
         },
+
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onCreateTicketClick,
@@ -153,7 +161,7 @@ fun ForumScreen(
                 val filterList = listOf(
                     "ALL" to "Semua (${allTickets.size})",
                     "OPEN" to "Terbuka",
-                    "MY_BRANCH" to "Cabang 4",
+                    "MY_BRANCH" to "Cabang Saya (${currentMechanic.branchId})",
                     "URGENT" to "🔥 Urgent",
                     "MESIN" to "Mesin",
                     "MATIC" to "Matic",
@@ -207,11 +215,31 @@ fun ForumScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Tidak ada tiket ditemukan.",
+                            text = "Tidak ada tiket ditemukan untuk filter ini.",
                             style = MaterialTheme.typography.titleMedium,
                             color = HighDensityNavy,
                             fontWeight = FontWeight.SemiBold
                         )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Coba ubah kata kunci pencarian atau reset filter ke Semua Tiket.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = HighDensityTextSecondary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        androidx.compose.material3.Button(
+                            onClick = {
+                                viewModel.setFilter("ALL")
+                                viewModel.setSearchQuery("")
+                            },
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = HighDensityBlue
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Tampilkan Semua Tiket (18 Cabang)")
+                        }
                     }
                 }
             } else {

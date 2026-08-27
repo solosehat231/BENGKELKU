@@ -40,30 +40,21 @@ private val LightColorScheme = lightColorScheme(
     onSecondaryContainer = HighDensityNavy,
     background = HighDensityCanvas,
     onBackground = HighDensityTextPrimary,
-    surface = CardSurface,
+    surface = Color.White,
     onSurface = HighDensityTextPrimary,
-    surfaceVariant = HighDensityBranchAvatar,
+    surfaceVariant = HighDensityCanvas,
     onSurfaceVariant = HighDensityTextSecondary,
     outline = CardBorder
 )
 
 @Composable
 fun BengkelKuTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false, // Enforce crisp high-contrast automotive light canvas
     dynamicColor: Boolean = false, // Use our brand colors for cohesive automotive look
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = LightColorScheme,
         typography = Typography,
         content = content
     )

@@ -42,11 +42,14 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.ui.navigation.Screen
+import com.example.ui.screens.CreateSolutionPostScreen
 import com.example.ui.screens.CreateTicketScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.ForumScreen
+import com.example.ui.screens.KnowledgeBountyScreen
 import com.example.ui.screens.LoginScreen
 import com.example.ui.screens.ProfileScheduleScreen
+import com.example.ui.screens.SolutionDetailScreen
 import com.example.ui.screens.SopLibraryScreen
 import com.example.ui.screens.TicketDetailScreen
 import com.example.ui.theme.HighDensityBlueLight
@@ -54,6 +57,8 @@ import com.example.ui.theme.HighDensityBorder
 import com.example.ui.theme.HighDensityNavy
 import com.example.ui.theme.HighDensityTextSecondary
 import com.example.ui.viewmodel.BengkelViewModel
+import androidx.compose.material.icons.filled.WorkspacePremium
+import androidx.compose.material.icons.outlined.WorkspacePremium
 
 data class BottomNavItem(
     val route: String,
@@ -74,10 +79,7 @@ fun MainApp(
         LoginScreen(
             viewModel = viewModel,
             onLoginSuccess = {
-                // Navigate to dashboard
-                navController.navigate(Screen.Dashboard.route) {
-                    popUpTo(0) { inclusive = true }
-                }
+                // Login state change in viewModel triggers recomposition into NavHost
             }
         )
         return
@@ -89,6 +91,7 @@ fun MainApp(
     val bottomNavItems = listOf(
         BottomNavItem(Screen.Dashboard.route, "BERANDA", Icons.Filled.Home, Icons.Outlined.Home, "bottom_nav_beranda"),
         BottomNavItem(Screen.Forum.route, "FORUM", Icons.Filled.Forum, Icons.Outlined.Forum, "bottom_nav_forum"),
+        BottomNavItem(Screen.KnowledgeBounty.route, "SOLUSI", Icons.Filled.WorkspacePremium, Icons.Outlined.WorkspacePremium, "bottom_nav_solusi"),
         BottomNavItem(Screen.SopLibrary.route, "SOP", Icons.Filled.MenuBook, Icons.Outlined.MenuBook, "bottom_nav_sop"),
         BottomNavItem(Screen.ProfileSchedule.route, "PROFIL", Icons.Filled.Person, Icons.Outlined.Person, "bottom_nav_profil")
     )
@@ -96,6 +99,7 @@ fun MainApp(
     val showBottomBar = currentRoute in listOf(
         Screen.Dashboard.route,
         Screen.Forum.route,
+        Screen.KnowledgeBounty.route,
         Screen.SopLibrary.route,
         Screen.ProfileSchedule.route
     )
@@ -168,7 +172,9 @@ fun MainApp(
                     onCreateTicketClick = { navController.navigate(Screen.CreateTicket.route) },
                     onTicketClick = { ticketId -> navController.navigate(Screen.TicketDetail.createRoute(ticketId)) },
                     onNavigateToForum = { navController.navigate(Screen.Forum.route) },
-                    onNavigateToProfile = { navController.navigate(Screen.ProfileSchedule.route) }
+                    onNavigateToProfile = { navController.navigate(Screen.ProfileSchedule.route) },
+                    onNavigateToSolutions = { navController.navigate(Screen.KnowledgeBounty.route) },
+                    onNavigateToSop = { navController.navigate(Screen.SopLibrary.route) }
                 )
             }
 
@@ -176,7 +182,44 @@ fun MainApp(
                 ForumScreen(
                     viewModel = viewModel,
                     onCreateTicketClick = { navController.navigate(Screen.CreateTicket.route) },
-                    onTicketClick = { ticketId -> navController.navigate(Screen.TicketDetail.createRoute(ticketId)) }
+                    onTicketClick = { ticketId -> navController.navigate(Screen.TicketDetail.createRoute(ticketId)) },
+                    onNavigateToSolutions = { navController.navigate(Screen.KnowledgeBounty.route) }
+                )
+            }
+
+            composable(Screen.KnowledgeBounty.route) {
+                KnowledgeBountyScreen(
+                    viewModel = viewModel,
+                    onNavigateToDetail = { solutionId ->
+                        navController.navigate(Screen.SolutionDetail.createRoute(solutionId))
+                    },
+                    onNavigateToCreate = {
+                        navController.navigate(Screen.CreateSolutionPost.route)
+                    }
+                )
+            }
+
+            composable(Screen.CreateSolutionPost.route) {
+                CreateSolutionPostScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onSuccess = { solutionId ->
+                        navController.popBackStack()
+                        navController.navigate(Screen.SolutionDetail.createRoute(solutionId))
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.SolutionDetail.route,
+                arguments = listOf(navArgument("solutionId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val solutionId = backStackEntry.arguments?.getLong("solutionId") ?: 1L
+                viewModel.selectSolutionPost(solutionId)
+                SolutionDetailScreen(
+                    solutionId = solutionId,
+                    viewModel = viewModel,
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 
@@ -189,7 +232,9 @@ fun MainApp(
                     viewModel = viewModel,
                     onLogoutClick = {
                         // Handled by viewModel.logout()
-                    }
+                    },
+                    onNavigateToSolutions = { navController.navigate(Screen.KnowledgeBounty.route) },
+                    onNavigateToForum = { navController.navigate(Screen.Forum.route) }
                 )
             }
 
@@ -219,3 +264,4 @@ fun MainApp(
         }
     }
 }
+

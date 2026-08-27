@@ -44,6 +44,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -256,16 +257,21 @@ fun CreateTicketScreen(
                 )
                 ExposedDropdownMenu(
                     expanded = brandExpanded,
-                    onDismissRequest = { brandExpanded = false }
+                    onDismissRequest = { brandExpanded = false },
+                    modifier = Modifier.background(Color.White)
                 ) {
                     carBrands.forEach { brand ->
                         DropdownMenuItem(
-                            text = { Text(brand, color = HighDensityNavy) },
+                            text = { Text(brand, color = HighDensityNavy, fontWeight = FontWeight.SemiBold) },
                             onClick = {
                                 selectedBrand = brand
                                 selectedModel = carModelsMap[brand]?.firstOrNull() ?: ""
                                 brandExpanded = false
-                            }
+                            },
+                            colors = MenuDefaults.itemColors(
+                                textColor = HighDensityNavy
+                            ),
+                            modifier = Modifier.background(Color.White)
                         )
                     }
                 }
@@ -301,15 +307,20 @@ fun CreateTicketScreen(
                 )
                 ExposedDropdownMenu(
                     expanded = modelExpanded,
-                    onDismissRequest = { modelExpanded = false }
+                    onDismissRequest = { modelExpanded = false },
+                    modifier = Modifier.background(Color.White)
                 ) {
                     carModelsMap[selectedBrand]?.forEach { model ->
                         DropdownMenuItem(
-                            text = { Text(model, color = HighDensityNavy) },
+                            text = { Text(model, color = HighDensityNavy, fontWeight = FontWeight.SemiBold) },
                             onClick = {
                                 selectedModel = model
                                 modelExpanded = false
-                            }
+                            },
+                            colors = MenuDefaults.itemColors(
+                                textColor = HighDensityNavy
+                            ),
+                            modifier = Modifier.background(Color.White)
                         )
                     }
                 }

@@ -85,11 +85,56 @@ data class Branch(
     val pic: String get() = headMechanic
 }
 
+enum class UserRole(val label: String, val badgeColorHex: Long) {
+    MECHANIC("Mekanik Cabang", 0xFF0284C7),
+    ADMIN_OWNER("Admin / Owner Bengkel", 0xFFD97706)
+}
+
 data class MechanicProfile(
     val name: String,
     val branchId: Int,
     val branchName: String,
+    val role: UserRole = UserRole.MECHANIC,
     val phone: String = "0812-3456-7890",
     val solvedTicketsCount: Int = 24,
-    val sharedSolutionsCount: Int = 18
+    val sharedSolutionsCount: Int = 18,
+    val totalBonusEarned: Long = 350000L
 )
+
+@Entity(tableName = "solution_posts")
+data class SolutionPostEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val title: String,
+    val vehicleBrand: String,
+    val vehicleModel: String,
+    val year: String,
+    val dtcCode: String,
+    val category: String,
+    val symptomDescription: String,
+    val rootCause: String,
+    val solutionSteps: String,
+    val partsReplaced: String,
+    val estimatedSavingsOrCost: String,
+    val mechanicName: String,
+    val branchId: Int,
+    val branchName: String,
+    val helpfulCount: Int = 0,
+    val isOwnerRewarded: Boolean = false,
+    val rewardAmount: Long = 0L,
+    val ownerNote: String = "",
+    val ownerRewardedAt: Long? = null,
+    val commentsCount: Int = 0,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "solution_comments")
+data class SolutionCommentEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val postId: Long,
+    val authorName: String,
+    val branchName: String,
+    val comment: String,
+    val isOwner: Boolean = false,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
