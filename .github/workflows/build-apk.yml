@@ -18,16 +18,23 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: gradle
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew || true
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: '8.11.1'
 
-    - name: Build APK with Gradle
-      run: ./gradlew assembleDebug || gradle assembleDebug
+    - name: Create Mock Env for Build
+      run: |
+        touch .env
+        echo "GEMINI_API_KEY=mock_key_for_ci_build" >> .env
+
+    - name: Build Debug APK
+      run: gradle assembleDebug --stacktrace --no-daemon
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: BengkelKu-App-Debug
         path: app/build/outputs/apk/debug/*.apk
