@@ -23,6 +23,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -89,7 +90,12 @@ fun TicketCard(
             verticalAlignment = Alignment.Top
         ) {
             // Left Branch Avatar Circle (e.g. C4, C2, C18)
-            val branchShort = ticket.branchName.replace("Cabang ", "C").take(4).ifEmpty { "C?" }
+            val branchDigits = ticket.branchName.filter { it.isDigit() }
+            val branchShort = when {
+                ticket.branchId > 0 -> "C${ticket.branchId}"
+                branchDigits.isNotEmpty() -> "C$branchDigits"
+                else -> "CBG"
+            }
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -168,6 +174,7 @@ fun TicketCard(
 
                 // Subtitle metadata: Mechanic & DTC Code / Branch
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -175,7 +182,10 @@ fun TicketCard(
                         text = "Mekanik: ${ticket.mechanicName} • ${ticket.branchName}",
                         style = MaterialTheme.typography.bodySmall,
                         color = HighDensityTextSecondary,
-                        fontSize = 11.sp
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
 
                     if (ticket.dtcCode.isNotBlank()) {
@@ -240,29 +250,36 @@ fun TicketCard(
                         text = "${ticket.licensePlate} • ${ticket.category}",
                         style = MaterialTheme.typography.bodySmall,
                         color = HighDensityTextSecondary,
-                        fontSize = 11.sp
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f).padding(end = 6.dp)
                     )
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .background(HighDensityBlueLight.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 7.dp, vertical = 2.dp)
+                    Surface(
+                        color = HighDensityBlueLight.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ChatBubbleOutline,
-                            contentDescription = null,
-                            tint = HighDensityBlue,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "${ticket.repliesCount} Tanggapan",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = HighDensityNavy,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 10.sp
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ChatBubbleOutline,
+                                contentDescription = null,
+                                tint = HighDensityBlue,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "${ticket.repliesCount} Tanggapan",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = HighDensityNavy,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp,
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
             }

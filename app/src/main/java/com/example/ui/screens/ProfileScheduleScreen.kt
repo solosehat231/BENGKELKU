@@ -413,8 +413,8 @@ fun ProfileScheduleScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(Color(0xFFFEF3C7), RoundedCornerShape(10.dp))
-                                    .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(10.dp))
+                                    .background(Color(0xFFFEF3C7), RoundedCornerShape(12.dp))
+                                    .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(12.dp))
                                     .padding(12.dp)
                             ) {
                                 Row(
@@ -429,7 +429,8 @@ fun ProfileScheduleScreen(
                                         Box(
                                             modifier = Modifier
                                                 .size(36.dp)
-                                                .background(Color(0xFFD97706), CircleShape),
+                                                .clip(CircleShape)
+                                                .background(Color(0xFFD97706)),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
@@ -442,14 +443,14 @@ fun ProfileScheduleScreen(
                                         Spacer(modifier = Modifier.width(10.dp))
                                         Column {
                                             Text(
-                                                text = "Total Reward Ditetapkan Owner",
+                                                text = "Total Reward Owner",
                                                 style = MaterialTheme.typography.labelMedium.copy(
                                                     fontWeight = FontWeight.Bold,
                                                     color = Color(0xFF92400E)
                                                 )
                                             )
                                             Text(
-                                                text = "Akumulasi dana tunai untuk mekanik cabang",
+                                                text = "Akumulasi dana tunai mekanik",
                                                 style = MaterialTheme.typography.labelSmall.copy(
                                                     fontSize = 10.sp,
                                                     color = Color(0xFF78350F)
@@ -458,13 +459,24 @@ fun ProfileScheduleScreen(
                                         }
                                     }
 
-                                    Text(
-                                        text = "Rp ${String.format("%,d", totalOwnerBonusPaid).replace(',', '.')}",
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = Color(0xFF047857)
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    Surface(
+                                        color = Color(0xFFDCFCE7),
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF86EFAC))
+                                    ) {
+                                        Text(
+                                            text = "Rp ${String.format("%,d", totalOwnerBonusPaid).replace(',', '.')}",
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            style = MaterialTheme.typography.labelMedium.copy(
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = Color(0xFF047857),
+                                                fontSize = 13.sp
+                                            ),
+                                            maxLines = 1
                                         )
-                                    )
+                                    }
                                 }
                             }
                         } else {
@@ -472,8 +484,8 @@ fun ProfileScheduleScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(Color(0xFFFEF3C7), RoundedCornerShape(10.dp))
-                                    .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(10.dp))
+                                    .background(Color(0xFFFEF3C7), RoundedCornerShape(12.dp))
+                                    .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(12.dp))
                                     .padding(12.dp)
                             ) {
                                 Row(
@@ -481,11 +493,15 @@ fun ProfileScheduleScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
                                         Box(
                                             modifier = Modifier
                                                 .size(36.dp)
-                                                .background(Color(0xFFD97706), CircleShape),
+                                                .clip(CircleShape)
+                                                .background(Color(0xFFD97706)),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
@@ -505,7 +521,7 @@ fun ProfileScheduleScreen(
                                                 )
                                             )
                                             Text(
-                                                text = "Apresiasi postingan solusi (diserahkan tunai)",
+                                                text = "Apresiasi postingan solusi (tunai)",
                                                 style = MaterialTheme.typography.labelSmall.copy(
                                                     fontSize = 10.sp,
                                                     color = Color(0xFF78350F)
@@ -514,13 +530,24 @@ fun ProfileScheduleScreen(
                                         }
                                     }
 
-                                    Text(
-                                        text = "Rp ${String.format("%,d", currentMechanic.totalBonusEarned).replace(',', '.')}",
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = Color(0xFF047857)
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    Surface(
+                                        color = Color(0xFFDCFCE7),
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF86EFAC))
+                                    ) {
+                                        Text(
+                                            text = "Rp ${String.format("%,d", currentMechanic.totalBonusEarned).replace(',', '.')}",
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            style = MaterialTheme.typography.labelMedium.copy(
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = Color(0xFF047857),
+                                                fontSize = 13.sp
+                                            ),
+                                            maxLines = 1
                                         )
-                                    )
+                                    }
                                 }
                             }
                         }
